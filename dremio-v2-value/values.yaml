@@ -1,0 +1,167 @@
+#nameOverride: "dremio-poc"
+image: dremio/dremio-oss
+imageTag: latest
+
+annotations: {}
+podAnnotations: {}
+labels: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+coordinator:
+  cpu: 1
+  memory: 4096
+  count: 1
+  # Coordinator data volume size (applies to the master coordinator only).
+  # In most managed Kubernetes environments (AKS, GKE, etc.), the size of the disk has a direct impact on
+  # the provisioned and maximum performance of the disk.
+  volumeSize: 32Gi
+  # replicaCount: 1
+  # resources:
+  #   requests:
+  #     cpu: "1"
+  #     memory: "4096"
+  #   limits:
+  #     cpu: "2"
+  #     memory: "8192"
+  # Web UI
+  web:
+    port: 9047
+    tls:
+      # To enable TLS for the web UI, set the enabled flag to true and provide
+      # the appropriate Kubernetes TLS secret.
+      enabled: false
+
+      # To create a TLS secret, use the following command:
+      # kubectl create secret tls ${TLS_SECRET_NAME} --key ${KEY_FILE} --cert ${CERT_FILE}
+      secret: dremio-tls-secret-ui
+
+  # ODBC/JDBC Client
+  client:
+    port: 31010
+    tls:
+      # To enable TLS for the client endpoints, set the enabled flag to
+      # true and provide the appropriate Kubernetes TLS secret. Client
+      # endpoint encryption is available only on Dremio Enterprise
+      # Edition and should not be enabled otherwise.
+      enabled: false
+
+      # To create a TLS secret, use the following command:
+      # kubectl create secret tls ${TLS_SECRET_NAME} --key ${KEY_FILE} --cert ${CERT_FILE}
+      secret: dremio-tls-secret-client
+
+  # Flight Client
+  flight:
+    port: 32010
+    tls:
+      # To enable TLS for the Flight endpoints, set the enabled flag to
+      # true and provide the appropriate Kubernetes TLS secret.
+      enabled: false
+
+      # To create a TLS secret, use the following command:
+      # kubectl create secret tls ${TLS_SECRET_NAME} --key ${KEY_FILE} --cert ${CERT_FILE}
+      secret: dremio-tls-secret-flight    
+    # Startup Probe
+  startupProbe:
+    # Max timeout for the probe is calculated as failureThreshold * periodSeconds
+    # failureThreshold: Maximum number of allowed failures
+    failureThreshold: 300
+    # periodSeconds: Polling frequency expressed in seconds
+    periodSeconds: 1
+
+  # Readiness Probe
+  readinessProbe:
+    # Max timeout for the probe is calculated as failureThreshold * periodSeconds
+    # failureThreshold: Maximum number of allowed failures
+    failureThreshold: 120
+    # periodSeconds: Polling frequency expressed in seconds
+    periodSeconds: 1    
+
+executor:
+  cpu: 1
+  memory: 4096
+
+  # Engines
+  # Engine names be 47 characters or less and be lowercase alphanumber characters or '-'.
+  # Note: The number of executor pods will be the length of the array below * count.
+  engines: ["default"]
+  count: 2
+
+  # Executor volume size.
+  volumeSize: 32Gi
+
+  # replicaCount: 2
+  # resources:
+  #   requests:
+  #     cpu: "1"
+  #     memory: "4096"
+  #   limits:
+  #     cpu: "2"
+  #     memory: "4096"
+  
+
+  cloudCache:
+    enabled: true
+
+    # Uncomment this value to use a different storage class for C3.
+    #storageClass:
+
+    # Volumes to use for C3, specify multiple volumes if there are more than one local
+    # NVMe disk that you would like to use for C3.
+    #
+    # The below example shows all valid options that can be provided for a volume.
+    # volumes:
+    # - name: "dremio-default-c3"
+    #   size: 100Gi
+    #   storageClass: "local-nvme"
+    volumes:
+    - size: 100Gi
+
+
+# Zookeeper
+zookeeper:
+  # The Zookeeper image used in the cluster.
+  image: zookeeper
+  imageTag: 3.8.4-jre-17
+  cpu: 0.5
+  memory: 512
+  count: 2
+  volumeSize: 10Gi
+
+distStorage:
+  # The supported distributed storage types are: local (<21.0.0 only), aws, azure, gcp, or azureStorage.
+  #
+  # local: (<21.0.0 only) Not recommended for production use. When using local, dist-caching is disabled.
+  # aws: AWS S3, additional parameters required, see "aws" section.
+  # azure: ADLS Gen 1, additional parameters required, see "azure" section.
+  # azureStorage: Azure Storage Gen2, additional paramters required, see "azureStorage" section.
+  # gcp: Google Cloud Storage, additional parameters required, see "gcp" section.
+  type: "azureStorage"
+
+  azure:
+    datalakeStoreName: "dremiopocstorage"
+    path: "/"
+    credentials:
+      clientId: "Lzf8Q~UFHRFnecrAWxcxAOH~EdwU_zXyKR5iEbjl"
+      clientSecret: "09944f36-470c-4704-916f-a76b5e8cef4a"
+      tenantId: "bc877c39-7887-4718-9c25-07bfe29cb8eb"
+  # azure:
+  #   adl:
+  #     enabled: true
+  #     accountName: "dremiopocstorage"
+  #     clientId: "Lzf8Q~UFHRFnecrAWxcxAOH~EdwU_zXyKR5iEbjl"
+  #     clientSecret: "09944f36-470c-4704-916f-a76b5e8cef4a"
+  #     tenantId: "bc877c39-7887-4718-9c25-07bfe29cb8eb"
+
+  azureStorage:
+      accountName: "dremiopocstorage"
+      filesystem: "dremio-data"
+      path: "/"
+      credentials:
+        accessKey: "0P1S5fqxB4EF4r9m5shY9HuZgJXphbdlOJD2jkAcqQnqhmley2KfedRUOh2V6PLzRt4iJ+NrlCEk+ASt5qzJ+w=="
+
+persistence:
+  enabled: true
+  size: 100Gi
+service:
+  type: LoadBalancer
